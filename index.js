@@ -10,7 +10,13 @@ const http=require('http')
 const app = express();
 const socketIo = require('socket.io');
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = new socketIo.Server(server, {
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST']
+    }
+  });
+  
 // Middleware
 app.use(bodyParser.json());
 app.use(cors());
@@ -80,23 +86,35 @@ const Message=mongoose.model('Message', messageSchema);
 // Create model
 const Student = mongoose.model('Student', studentSchema);
 
-io.on('connection', socket => {
-    console.log('New client connected');
-  
-    socket.on('join', roomId => {
-      socket.join(roomId);
-      console.log(`Socket ${socket.id} joined room ${roomId}`);
+
+io.on('connection', (socket) => {
+    console.log('A user connected');
+
+    // Listen for chat messages
+    socket.on('chatMessage', async (data) => {
+        console.log('Message received:', data);
+
+        try {
+            // Save the message to the database
+            const newMessage = new Message({
+                senderId: data.senderId,
+                receiverId: data.receiverId,
+                message: data.message
+            });
+            await newMessage.save();
+
+            // Broadcast the message to all connected clients
+            io.emit('chatMessage', data);
+        } catch (error) {
+            console.error('Error saving message to database:', error);
+        }
     });
-  
-    socket.on('chatMessage', ({ senderId, receiverId, message }) => {
-      io.to(receiverId).emit('chatMessage', { senderId, message });
-    });
-  
+
+    // Clean up when a user disconnects
     socket.on('disconnect', () => {
-      console.log('Client disconnected');
+        console.log('User disconnected');
     });
-  });
-  
+});
 // Define routes
 // app.get('/insert', async (req, res) => {
 //     try {
