@@ -5,20 +5,15 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const fs = require('fs');
 const jwt= require('jsonwebtoken')
+const http=require('http')
 // Initialize Express app
 const app = express();
-
+const socketIo = require('socket.io');
+const server = http.createServer(app);
+const io = socketIo(server);
 // Middleware
 app.use(bodyParser.json());
 app.use(cors());
-
-
-const corsOptions ={
-    origin:'https://maya-inky.vercel.app', 
-    credentials:true,            
-    optionSuccessStatus:200
-}
-app.use(cors(corsOptions));
 
 
 // Connect to MongoDB using Mongoose
@@ -61,10 +56,47 @@ const studentSchema = new mongoose.Schema({
     ]
 });
 
+const messageSchema = new mongoose.Schema({
+    senderId: {
+      type: String,
+      required: true,
+    },
+    receiverId: {
+      type: String,
+      required: true,
+    },
+    message: {
+      type: String,
+      required: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  });
+  
+const Message=mongoose.model('Message', messageSchema);
+
 // Create model
 const Student = mongoose.model('Student', studentSchema);
 
-
+io.on('connection', socket => {
+    console.log('New client connected');
+  
+    socket.on('join', roomId => {
+      socket.join(roomId);
+      console.log(`Socket ${socket.id} joined room ${roomId}`);
+    });
+  
+    socket.on('chatMessage', ({ senderId, receiverId, message }) => {
+      io.to(receiverId).emit('chatMessage', { senderId, message });
+    });
+  
+    socket.on('disconnect', () => {
+      console.log('Client disconnected');
+    });
+  });
+  
 // Define routes
 // app.get('/insert', async (req, res) => {
 //     try {
@@ -96,12 +128,43 @@ app.get('/students', async (req, res) => {
     try {
 
         const students = await Student.find();
+        
         res.json(students);
     } catch (error) {
         console.error('Error fetching students:', error);
         res.status(500).json({ error: 'Error fetching students' });
     }
 });
+
+
+app.post('/student', async (req, res) => {
+    try {
+        const student = await Student.findById(req.body.userId);
+        if (!student) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+        console.log(student)
+        const matchRequests = student.Matchs;
+
+        // Fetch VTU and name for each match request
+        const matchRequestDetails = await Promise.all(matchRequests.map(async (matchRequest) => {
+            const matchStudent = await Student.findById(matchRequest);
+            if (matchStudent) {
+                return { id: matchStudent._id, name: matchStudent.Name, VTU: matchStudent.VTU };
+            }
+        }));
+
+        const count = matchRequestDetails.length; // Count the number of match requests
+
+        console.log(matchRequestDetails);
+        res.status(200).json({ matchRequestDetails, count, student });
+    } catch (error) {
+        console.error('Error fetching match requests:', error);
+        res.status(500).json({ error: 'Error fetching match requests' });
+    }
+});
+
+
 
 const JWT_SECRET_KEY = 'Hamara hai';
 app.post('/login', async (req, res) => {
@@ -233,15 +296,27 @@ app.post('/add-match', async (req, res) => {
         }
 
         if (approvalStatus === true) {
-            // If approvalStatus is true, add the match request ID to the Matchs array
-            // and delete it from the matchRequests array
+            // If approvalStatus is true
+            // Check if the match request ID already exists in the Matchs array
+            if (student.Matchs.includes(id)) {
+                console.log('Match request already approved')
+                return res.status(400).json({ error: 'Match request already approved' });
+              
+            }
+
+            // Add the match request ID to the Matchs array
             const response = await Student.updateOne(
                 { _id: userId },
                 { $push: { Matchs: id }, $pull: { MatchRequests: id } }
             );
-            console.log(response)
-            if (response.nModified === 1) {
-                console.log("Updated")
+
+            // Update the Matchs array of the match student
+            const resp = await Student.updateOne(
+                { _id: id },
+                { $push: { Matchs: userId } }
+            );
+
+            if (response.nModified === 1 && resp.nModified === 1) {
                 return res.status(200).json({ message: 'Match request approved and processed successfully' });
             } else {
                 return res.status(500).json({ error: 'Error processing approval' });
@@ -268,10 +343,11 @@ app.post('/add-match', async (req, res) => {
     }
 });
 
+
   
   
 // Start the server
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
