@@ -83,27 +83,29 @@ const ChatRoomSchema = new mongoose.Schema({
 const Student = mongoose.model('Student', studentSchema);
 
 io.on('connection', (socket) => {
-    console.log('A user connected');
-  
+   
     socket.on('chat message', async (msg) => {
+      console.log('message:', msg);
+      const { senderId, roomId, message,receiverId} = msg; // Extract senderId, receiverId, and message from the message object
+     
+      console.log(msg)
       try {
-        const { senderId, roomId, message, receiverId } = msg;
-        
-        // Validate and sanitize message data if needed
-        
-        // Save message to the database
-        const newMessage = new Message({ senderId, roomId, message, receiverId });
+        const newMessage = new Message({
+          senderId,
+          roomId,
+          message,
+          receiverId,
+        });
+        console.log(newMessage )
         await newMessage.save();
         
-        // Emit the message to all connected clients
         io.emit('chat message', msg);
       } catch (error) {
-        console.error('Error handling chat message:', error);
-        // Handle errors appropriately
+        console.error('Error saving message:', error);
       }
     });
   });
-  
+
 // Define routes
 // app.get('/insert', async (req, res) => {
 //     try {
