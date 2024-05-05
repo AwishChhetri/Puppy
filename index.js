@@ -83,34 +83,27 @@ const ChatRoomSchema = new mongoose.Schema({
 const Student = mongoose.model('Student', studentSchema);
 
 io.on('connection', (socket) => {
-    // console.log('A user connected');
-//   
-    socket.on('disconnect', () => {
-    //  console.log('User disconnected');
-    });
+    console.log('A user connected');
   
     socket.on('chat message', async (msg) => {
-      console.log('message:', msg);
-      const { senderId, roomId, message,receiverId} = msg; // Extract senderId, receiverId, and message from the message object
-      // Save the message to the database
-      console.log(msg)
       try {
-        const newMessage = new Message({
-          senderId,
-          roomId,
-          message,
-          receiverId,
-        });
-        console.log(newMessage )
+        const { senderId, roomId, message, receiverId } = msg;
+        
+        // Validate and sanitize message data if needed
+        
+        // Save message to the database
+        const newMessage = new Message({ senderId, roomId, message, receiverId });
         await newMessage.save();
-        // Emit the message to all clients
+        
+        // Emit the message to all connected clients
         io.emit('chat message', msg);
       } catch (error) {
-        console.error('Error saving message:', error);
+        console.error('Error handling chat message:', error);
+        // Handle errors appropriately
       }
     });
   });
-
+  
 // Define routes
 // app.get('/insert', async (req, res) => {
 //     try {
@@ -366,15 +359,22 @@ app.post('/create-chat-room', async (req, res) => {
     
    
 
-function generateSingleValue(id1, id2) {
+    function generateSingleValue(id1, id2) {
+     
+        const strId1 = id1.toString();
+        const strId2 = id2.toString();
     
-    const combinedIds = id1.toString() + id2.toString();
-
-    // Hash the concatenated string using SHA-256
-    const hash = crypto.createHash('sha256').update(combinedIds).digest('hex');
-
-    return hash;
-}
+        // Sort the IDs
+        const sortedIds = [strId1, strId2].sort();
+    
+        // Concatenate the sorted IDs
+        const combinedIds = sortedIds.join('');
+    
+        // Hash the concatenated string using SHA-256
+        const hash = crypto.createHash('sha256').update(combinedIds).digest('hex');
+    
+        return hash;
+    }
 
 
 const  roomId  = generateSingleValue(senderId, receiverId );
@@ -424,3 +424,28 @@ const PORT = process.env.PORT || 8000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
+
+ 
+  function generateSingleValue(id1, id2) {
+    // Convert IDs to strings
+    const strId1 = id1.toString();
+    const strId2 = id2.toString();
+
+    // Sort the IDs
+    const sortedIds = [strId1, strId2].sort();
+
+    // Concatenate the sorted IDs
+    const combinedIds = sortedIds.join('');
+
+    // Hash the concatenated string using SHA-256
+    const hash = crypto.createHash('sha256').update(combinedIds).digest('hex');
+
+    return hash;
+}
+
+// Example usage:
+const id1 = "6050b14363d4380041f0a2a1"; // Example ObjectId 1
+const id2 = "6050b14663d4380041f0a2a2"; // Example ObjectId 2
+
+const singleValue = generateSingleValue(id1, id2);
+console.log(singleValue);
