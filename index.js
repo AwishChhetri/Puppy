@@ -62,51 +62,43 @@ const studentSchema = new mongoose.Schema({
     ],
    
 });
+const MessageSchema = new mongoose.Schema({
+    roomId: String,
+    senderId: String,
+    message: String,
+  });
 
-const messageSchema = new mongoose.Schema({
-    senderId: {
-      type: String,
-      required: true,
-    },
-    receiverId: {
-      type: String,
-      required: true,
-    },
-    messages: [{
-      message: {
-        type: String,
-        required: true,
-      },
-      createdAt: {
-        type: Date,
-        default: Date.now,
-      },
-    }],
-});
+const ChatRoomSchema = new mongoose.Schema({
+    roomId: { type: String, unique: true },
+  });
+  
+  // Create ChatRoom model
+  const ChatRoom = mongoose.model('ChatRoom', ChatRoomSchema);
 
-
-  const Message=mongoose.model('Message', messageSchema);
+  const Message=mongoose.model('Message', MessageSchema);
 
 // Create model
 const Student = mongoose.model('Student', studentSchema);
 
 io.on('connection', (socket) => {
-    console.log('A user connected');
+    // console.log('A user connected');
   
     socket.on('disconnect', () => {
-      console.log('User disconnected');
+    //   console.log('User disconnected');
     });
   
     socket.on('chat message', async (msg) => {
       console.log('message:', msg);
-      const { senderId, receiverId, message } = msg; // Extract senderId, receiverId, and message from the message object
+      const { senderId, roomId, message } = msg; // Extract senderId, receiverId, and message from the message object
       // Save the message to the database
+      console.log(msg)
       try {
         const newMessage = new Message({
           senderId,
-          receiverId,
+          roomId,
           message,
         });
+        console.log(newMessage )
         await newMessage.save();
         // Emit the message to all clients
         io.emit('chat message', msg);
@@ -363,6 +355,48 @@ app.post('/add-match', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+
+
+app.post('/create-chat-room', async (req, res) => {
+    const { senderId, receiverId } = req.body;
+    const roomId = `${senderId}_${receiverId}`;
+  
+    try {
+      // Check if the chat room already exists
+      const existingRoom = await ChatRoom.findOne({ roomId });
+  
+      if (existingRoom) {
+        // If room already exists, return a message
+        return res.status(200).json({roomId});
+      }
+  
+      // If room doesn't exist, create a new one
+      const newRoom = new ChatRoom({ roomId });
+      await newRoom.save();
+  
+      // Return the room ID
+      return res.status(200).json({ roomId });
+    } catch (error) {
+      console.error('Error creating chat room:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  app.get('/chat-room-messages', async (req, res) => {
+    const { roomId } = req.query;
+  
+    try {
+      // Fetch messages for the specified room
+      const messages = await Message.find({ roomId });
+  
+      // Return the messages
+      return res.status(200).json({ messages });
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
 
 
   
