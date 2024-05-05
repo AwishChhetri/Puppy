@@ -59,7 +59,8 @@ const studentSchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Student' 
         }
-    ]
+    ],
+   
 });
 
 const messageSchema = new mongoose.Schema({
@@ -71,50 +72,50 @@ const messageSchema = new mongoose.Schema({
       type: String,
       required: true,
     },
-    message: {
-      type: String,
-      required: true,
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-  });
-  
-const Message=mongoose.model('Message', messageSchema);
+    messages: [{
+      message: {
+        type: String,
+        required: true,
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
+});
+
+
+  const Message=mongoose.model('Message', messageSchema);
 
 // Create model
 const Student = mongoose.model('Student', studentSchema);
 
-
 io.on('connection', (socket) => {
     console.log('A user connected');
-
-    // Listen for chat messages
-    socket.on('chatMessage', async (data) => {
-        console.log('Message received:', data);
-
-        try {
-            // Save the message to the database
-            const newMessage = new Message({
-                senderId: data.senderId,
-                receiverId: data.receiverId,
-                message: data.message
-            });
-            await newMessage.save();
-
-            // Broadcast the message to all connected clients
-            io.emit('chatMessage', data);
-        } catch (error) {
-            console.error('Error saving message to database:', error);
-        }
-    });
-
-    // Clean up when a user disconnects
+  
     socket.on('disconnect', () => {
-        console.log('User disconnected');
+      console.log('User disconnected');
     });
-});
+  
+    socket.on('chat message', async (msg) => {
+      console.log('message:', msg);
+      const { senderId, receiverId, message } = msg; // Extract senderId, receiverId, and message from the message object
+      // Save the message to the database
+      try {
+        const newMessage = new Message({
+          senderId,
+          receiverId,
+          message,
+        });
+        await newMessage.save();
+        // Emit the message to all clients
+        io.emit('chat message', msg);
+      } catch (error) {
+        console.error('Error saving message:', error);
+      }
+    });
+  });
+
 // Define routes
 // app.get('/insert', async (req, res) => {
 //     try {
@@ -306,7 +307,7 @@ app.post('/add-match', async (req, res) => {
     const { id, approvalStatus, userId } = req.body;
    console.log(req.body)
     try {
-        // Find the student by ID
+
         const student = await Student.findById(userId);
 
         if (!student) {
@@ -333,6 +334,8 @@ app.post('/add-match', async (req, res) => {
                 { _id: id },
                 { $push: { Matchs: userId } }
             );
+
+           
 
             if (response.nModified === 1 && resp.nModified === 1) {
                 return res.status(200).json({ message: 'Match request approved and processed successfully' });
