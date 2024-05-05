@@ -8,6 +8,7 @@ const jwt= require('jsonwebtoken')
 const http=require('http')
 // Initialize Express app
 const app = express();
+const crypto = require('crypto');
 const socketIo = require('socket.io');
 const server = http.createServer(app);
 const io = new socketIo.Server(server, {
@@ -66,6 +67,7 @@ const MessageSchema = new mongoose.Schema({
     roomId: String,
     senderId: String,
     message: String,
+    receiverId:String
   });
 
 const ChatRoomSchema = new mongoose.Schema({
@@ -82,14 +84,14 @@ const Student = mongoose.model('Student', studentSchema);
 
 io.on('connection', (socket) => {
     // console.log('A user connected');
-  
+//   
     socket.on('disconnect', () => {
-    //   console.log('User disconnected');
+    //  console.log('User disconnected');
     });
   
     socket.on('chat message', async (msg) => {
       console.log('message:', msg);
-      const { senderId, roomId, message } = msg; // Extract senderId, receiverId, and message from the message object
+      const { senderId, roomId, message,receiverId} = msg; // Extract senderId, receiverId, and message from the message object
       // Save the message to the database
       console.log(msg)
       try {
@@ -97,6 +99,7 @@ io.on('connection', (socket) => {
           senderId,
           roomId,
           message,
+          receiverId,
         });
         console.log(newMessage )
         await newMessage.save();
@@ -360,7 +363,22 @@ app.post('/add-match', async (req, res) => {
 
 app.post('/create-chat-room', async (req, res) => {
     const { senderId, receiverId } = req.body;
-    const roomId = `${senderId}_${receiverId}`;
+    
+   
+
+function generateSingleValue(id1, id2) {
+    
+    const combinedIds = id1.toString() + id2.toString();
+
+    // Hash the concatenated string using SHA-256
+    const hash = crypto.createHash('sha256').update(combinedIds).digest('hex');
+
+    return hash;
+}
+
+
+const  roomId  = generateSingleValue(senderId, receiverId );
+console.log( roomId );
   
     try {
       // Check if the chat room already exists
