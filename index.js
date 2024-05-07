@@ -63,48 +63,85 @@ const studentSchema = new mongoose.Schema({
     ],
    
 });
-const MessageSchema = new mongoose.Schema({
-    roomId: String,
-    senderId: String,
-    message: String,
-    receiverId:String
-  });
 
 const ChatRoomSchema = new mongoose.Schema({
     roomId: { type: String, unique: true },
-  });
+    messages: [
+        {
+            senderId: {
+                type: String,
+                
+            },
+            content: {
+                type: String,
+               
+            }, 
+            timestamp: { type: Date, default: Date.now } 
+        }
+    ]
+});
+
   
   // Create ChatRoom model
   const ChatRoom = mongoose.model('ChatRoom', ChatRoomSchema);
 
-  const Message=mongoose.model('Message', MessageSchema);
 
 // Create model
 const Student = mongoose.model('Student', studentSchema);
 
+
+// Server-side code
+
+// Import necessary modules and set up server
 io.on('connection', (socket) => {
-   
-    socket.on('chat message', async (msg) => {
-      console.log('message:', msg);
-      const { senderId, roomId, message,receiverId} = msg; // Extract senderId, receiverId, and message from the message object
-     
-      console.log(msg)
-      try {
-        const newMessage = new Message({
-          senderId,
-          roomId,
-          message,
-          receiverId,
-        });
-        console.log(newMessage )
-        await newMessage.save();
-        
-        io.emit('chat message', msg);
-      } catch (error) {
-        console.error('Error saving message:', error);
-      }
+    socket.on('connected', async (roomId) => {
+        console.log("User Connected");
+        try {
+            const chat = await ChatRoom.findOne({ roomId }, { messages: 1 });
+            console.log(chat)
+            const previousMessages = chat ? chat.messages : [];
+            console.log('Previous Messages:', previousMessages);
+            // Emit 'previous_messages' event to the connected client
+            socket.emit('previous_messages', previousMessages);
+        } catch (error) {
+            console.error('Error fetching previous messages:', error);
+            // Handle error - You might want to emit an error event to the client
+        }
     });
-  });
+
+    socket.on('chat message', async (msg, callback) => { // Added 'callback' parameter
+        console.log('Received message:', msg);
+        const { senderId, roomId, content } = msg;
+
+        try {
+            const updatedChatRoom = await ChatRoom.findOneAndUpdate(
+                { roomId },
+                {
+                    $push: {
+                        messages: {
+                            senderId: senderId,
+                            content: content,
+                            timestamp: Date.now()
+                        }
+                    }
+                },
+                { new: true }
+            );
+
+            console.log('Updated chat room:', updatedChatRoom);
+            io.emit('chat message', msg);
+            // Send acknowledgment to the client
+            callback({ success: true }); // Sending success acknowledgment
+        } catch (error) {
+            console.error('Error updating chat room:', error);
+            // Handle error - You might want to emit an error event to the client
+            callback({ success: false, error: 'Error updating chat room' }); // Sending error acknowledgment
+        }
+    });
+});
+
+
+
 
 // Define routes
 // app.get('/insert', async (req, res) => {
@@ -358,65 +395,69 @@ app.post('/add-match', async (req, res) => {
 
 app.post('/create-chat-room', async (req, res) => {
     const { senderId, receiverId } = req.body;
-    
-   
 
     function generateSingleValue(id1, id2) {
-     
         const strId1 = id1.toString();
         const strId2 = id2.toString();
-    
+
         // Sort the IDs
         const sortedIds = [strId1, strId2].sort();
-    
+
         // Concatenate the sorted IDs
         const combinedIds = sortedIds.join('');
-    
+
         // Hash the concatenated string using SHA-256
         const hash = crypto.createHash('sha256').update(combinedIds).digest('hex');
-    
+
         return hash;
     }
 
+    const roomId = generateSingleValue(senderId, receiverId);
+    console.log(roomId);
 
-const  roomId  = generateSingleValue(senderId, receiverId );
-console.log( roomId );
-  
     try {
-      // Check if the chat room already exists
-      const existingRoom = await ChatRoom.findOne({ roomId });
-  
-      if (existingRoom) {
-        // If room already exists, return a message
-        return res.status(200).json({roomId});
-      }
-  
-      // If room doesn't exist, create a new one
-      const newRoom = new ChatRoom({ roomId });
-      await newRoom.save();
-  
-      // Return the room ID
-      return res.status(200).json({ roomId });
+        // Check if the chat room already exists
+        const existingRoom = await ChatRoom.findOne({ roomId });
+
+        if (existingRoom) {
+            // If room already exists, return a message
+            return res.status(200).json({ roomId });
+        }
+
+        // If room doesn't exist, create a new one
+        const newRoom = new ChatRoom({ roomId });
+        await newRoom.save();
+
+        // Return the room ID
+        return res.status(200).json({ roomId });
     } catch (error) {
-      console.error('Error creating chat room:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+        console.error('Error creating chat room:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
-  });
+});
+
 
   app.get('/chat-room-messages', async (req, res) => {
     const { roomId } = req.query;
-  
+
     try {
-      // Fetch messages for the specified room
-      const messages = await Message.find({ roomId });
-  
-      // Return the messages
-      return res.status(200).json({ messages });
+        // Fetch messages for the specified room
+        const chatRoom = await ChatRoom.findOne({ roomId });
+
+        if (!chatRoom) {
+            return res.status(404).json({ message: 'Chat room not found' });
+        }
+
+        const messages = chatRoom.messages;
+        console.log(messages)
+        // Return the messages
+        return res.status(200).json({ messages });
     } catch (error) {
-      console.error('Error fetching messages:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+        console.error('Error fetching messages:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
-  });
+});
+
 
 
   
