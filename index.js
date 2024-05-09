@@ -143,7 +143,7 @@ io.on('connection', (socket) => {
 
 
 
-// Define routes
+
 // app.get('/insert', async (req, res) => {
 //     try {
 //         const data = fs.readFileSync('students.json', 'utf8');
@@ -302,32 +302,60 @@ app.post('/students/:id/add-user-id', async (req, res) => {
     }
 });
 
+
 app.post('/add-match', async (req, res) => {
     const { userId, matchId } = req.body;
-  
+
     try {
-      // Check if the user exists
-      const user = await Student.findById(matchId);
-      console.log(user)
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-  
-      // Check if matchId is already added to MatchRequests
-      if (!user.MatchRequests.includes(userId)) {
-        // If not added, update the MatchRequests array
-        user.MatchRequests.push(userId);
-        const resp=await user.save();
-        console.log(resp)
-        return res.status(200).json({ message: 'Match ID added successfully' });
-      } else {
-        return res.status(400).json({ error: 'Match ID already exists in MatchRequests' });
-      }
+        // Check if the user exists
+        const user = await Student.findById(matchId);
+        const user1 = await Student.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        if(!user1.MatchRequests.includes(matchId)){
+            if(!user1.Matchs.includes(matchId)){
+                if (user.MatchRequests.includes(userId)) {
+                    if(user.Matchs.includes(userId)){
+                    user.Matchs.push(userId);
+                    user1.Matchs.push(matchId);
+                    await user.save();
+                    await user1.save();
+                    return res.status(200).json({ message: 'Match found' });
+                    }else{
+                        return res.status(200).json({ message: 'Aleady Matched' });
+                    }
+                    
+                } else {
+                    if (user1.MatchRequests.length < 8) {
+                        user1.MatchRequests.push(matchId);
+                        await user1.save();
+                        return res.status(200).json({ message: 'Match ID added successfully' });
+                    } else {
+                        return res.status(200).json({ message: 'Reached your max limit' });
+                    }
+                    
+                }
+            }else{
+                return res.status(200).json({ message: 'Aleady Matched' });
+            }
+            
+
+        }else{
+            return res.status(200).json({ message: 'Match ID already in request' });
+
+        }
+
+        // Check if matchId is already added to MatchRequests
+       
     } catch (error) {
-      console.error('Error adding match ID:', error);
-      return res.status(500).json({ error: 'Internal server error' });
+        console.error('Error adding match ID:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
-  });
+});
+
 
 
   app.post('/approve', async (req, res) => {
@@ -336,7 +364,7 @@ app.post('/add-match', async (req, res) => {
     try {
 
         const student = await Student.findById(userId);
-
+         console.log(student)
         if (!student) {
             return res.status(404).json({ error: 'Student not found' });
         }
@@ -346,41 +374,21 @@ app.post('/add-match', async (req, res) => {
             // Check if the match request ID already exists in the Matchs array
             if (student.Matchs.includes(id)) {
                 console.log('Match request already approved')
-                return res.status(400).json({ error: 'Match request already approved' });
+                return res.status(200).json({ message: 'Match request already approved' });
               
             }
 
-            // Add the match request ID to the Matchs array
-            const response = await Student.updateOne(
-                { _id: userId },
-                { $push: { Matchs: id }, $pull: { MatchRequests: id } }
-            );
-
-            // Update the Matchs array of the match student
-            const resp = await Student.updateOne(
-                { _id: id },
-                { $push: { Matchs: userId } }
-            );
 
            
-
-            if (response.nModified === 1 && resp.nModified === 1) {
-                return res.status(200).json({ message: 'Match request approved and processed successfully' });
-            } else {
-                return res.status(500).json({ error: 'Error processing approval' });
-            }
         } else if (approvalStatus === false) {
             // If approvalStatus is false, delete the match request
             const response = await Student.updateOne(
                 { _id: userId },
                 { $pull: { MatchRequests: id } }
             );
+            return res.status(200).json({ error: 'Deleted' });
 
-            if (response.nModified === 1) {
-                return res.status(200).json({ message: 'Match request deleted successfully' });
-            } else {
-                return res.status(500).json({ error: 'Error deleting match request' });
-            }
+            
         } else {
             // Handle invalid approvalStatus
             return res.status(400).json({ error: 'Invalid approval status' });
@@ -390,8 +398,6 @@ app.post('/add-match', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-
-
 
 app.post('/create-chat-room', async (req, res) => {
     const { senderId, receiverId } = req.body;
