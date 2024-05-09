@@ -310,15 +310,17 @@ app.post('/add-match', async (req, res) => {
         // Check if the user exists
         const user = await Student.findById(matchId);
         const user1 = await Student.findById(userId);
-
+        console.log(user)
+        console.log(user1)
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
         if(!user1.MatchRequests.includes(matchId)){
+            
             if(!user1.Matchs.includes(matchId)){
                 if (user.MatchRequests.includes(userId)) {
-                    if(user.Matchs.includes(userId)){
+                    if(!user.Matchs.includes(userId)){
                     user.Matchs.push(userId);
                     user1.Matchs.push(matchId);
                     await user.save();
@@ -339,7 +341,7 @@ app.post('/add-match', async (req, res) => {
                     
                 }
             }else{
-                return res.status(200).json({ message: 'Aleady Matched' });
+                return res.status(200).json({ message: 'Aleady Matched----------' });
             }
             
 
