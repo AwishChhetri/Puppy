@@ -17,6 +17,8 @@ const io = new socketIo.Server(server, {
       methods: ['GET', 'POST']
     }
   });
+
+  require('dotenv').config(); 
   
 // Middleware
 app.use(bodyParser.json());
@@ -466,7 +468,9 @@ app.post('/create-chat-room', async (req, res) => {
     }
 });
 
-
+app.get('/',(req,res)=>{
+    res.send("Hello this is Cupid!")
+})
 
   
   
