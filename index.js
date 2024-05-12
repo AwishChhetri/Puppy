@@ -6,6 +6,7 @@ const cors = require('cors');
 const fs = require('fs');
 const jwt= require('jsonwebtoken')
 const http=require('http')
+const nodemailer = require('nodemailer');
 // Initialize Express app
 const app = express();
 const crypto = require('crypto');
@@ -130,6 +131,15 @@ const Student = mongoose.model('Student', studentSchema);
 
 // Server-side code
 
+ 
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'cupid.thematchmakerr@gmail.com', // Your Gmail email address
+      pass: 'mbyb cfhx vpzx kfby' // Your Gmail password or application-specific password
+    }
+  });
+
 // Import necessary modules and set up server
 io.on('connection', (socket) => {
     socket.on('connected', async (roomId) => {
@@ -182,18 +192,18 @@ io.on('connection', (socket) => {
 
 
 
-// app.get('/insert', async (req, res) => {
-//     try {
-//         const data = fs.readFileSync('students.json', 'utf8');
-//         const jsonData = JSON.parse(data);
-//         const result = await Student.insertMany(jsonData);
-//         console.log('Data inserted successfully:', result);
-//         res.status(200).send('Data inserted successfully');
-//     } catch (error) {
-//         console.error('Error inserting data:', error);
-//         res.status(500).send('Error inserting data');
-//     }
-// });
+app.get('/insert', async (req, res) => {
+    try {
+        const data = fs.readFileSync('students.json', 'utf8');
+        const jsonData = JSON.parse(data);
+        const result = await Student.insertMany(jsonData);
+        console.log('Data inserted successfully:', result);
+        res.status(200).send('Data inserted successfully');
+    } catch (error) {
+        console.error('Error inserting data:', error);
+        res.status(500).send('Error inserting data');
+    }
+});
 
 app.post('/students', async (req, res) => {
     console.log(req.body)
@@ -571,37 +581,107 @@ app.post('/cupidPicker', async (req, res) => {
             console.log("match not found");
         } else {
             console.log("match found");
-            
-            // Extract userId from finalMatch items
-            const matchedUserIds = finalMatch.map(match => match.userId);
         
-            // Update each student's matches array
+            const matchedUserIds = finalMatch.map(match => match.userId);
+            console.log(matchedUserIds);
+        
             try {
-                const updatedStudents = await Promise.all(matchedUserIds.map(async (matchedUserId) => {
-                    // Find the student by userId and update their matches array
-                    return await Student.findByIdAndUpdate(
-                        userId,
-                        { $push: { matches: matchedUserIds } }, // Add current user's userId to matches array
-                        { new: true }
-                    );
-                }));
-
+                // Update current user's matches array with matchedUserIds
+                const updatedStudents = await Student.findByIdAndUpdate(
+                    userId,
+                    { $push: { Matchs: { $each: matchedUserIds } } }, // Add matched user's userIds to current user's matches array
+                    { new: true }
+                );
+        
+                // Update each matched user's matches array with current user's ID
                 const updatedStudent2 = await Promise.all(matchedUserIds.map(async (matchedUserId) => {
                     // Find the student by userId and update their matches array
                     return await Student.findByIdAndUpdate(
-                        matchedUserIds,
-                        { $push: { matches: userId } }, // Add current user's userId to matches array
+                        matchedUserId,
+                        { $push: { Matchs: userId } }, // Add current user's userId to matches array
                         { new: true }
                     );
                 }));
         
                 console.log("Updated students with matches:", updatedStudents);
                 console.log("Updated students with matches:", updatedStudent2);
+
+                        
+const sendEmail = async (to, subject, text) => {
+    try {
+        await transporter.sendMail({
+            from: 'cupid.thematchmakerr@gmail.com', // Your email address
+            to,
+            subject,
+            text,
+        });
+        console.log('Email sent successfully to:', to);
+    } catch (error) {
+        console.error('Error sending email:', error);
+    }
+};
+console.log(updatedStudents.VTU)
+const vtu1 = updatedStudents.VTU;
+const maleUserEmail = `vtu${vtu1}@veltech.edu.in`;
+const subjectTemplate = 'A Match Has Been Found For You!';
+const textTemplate = `Hey User,
+Exciting news! We've discovered a potential match just for you. Log in to cupidhub.online to learn more. Keep an open mind as you embark on this journey of discovery, connection, and perhaps even love!
+
+Warm regards,
+Cupid`;
+
+// Send email to the first user
+sendEmail(maleUserEmail, subjectTemplate, textTemplate);
+
+// Send emails to other users
+updatedStudent2.forEach((item) => {
+    const vtu = item.VTU;
+    const userEmail = `vtu${vtu}@veltech.edu.in`;
+    sendEmail(userEmail, subjectTemplate, textTemplate);
+})
             } catch (error) {
                 console.error("Error updating students with matches:", error);
                 // Handle error if updating students fails
             }
+
+         
+const sendEmail = async (to, subject, text) => {
+    try {
+        await transporter.sendMail({
+            from: 'cupid.thematchmakerr@gmail.com', // Your email address
+            to,
+            subject,
+            text,
+        });
+        console.log('Email sent successfully to:', to);
+    } catch (error) {
+        console.error('Error sending email:', error);
+    }
+};
+console.log(updatedStudents.VTU)
+const vtu1 = updatedStudents.VTU;
+const maleUserEmail = `vtu${vtu1}@veltech.edu.in`;
+const subjectTemplate = 'A Match Has Been Found For You!';
+const textTemplate = `Hey User,
+Exciting news! We've discovered a potential match just for you. Log in to cupidhub.online to learn more. Keep an open mind as you embark on this journey of discovery, connection, and perhaps even love!
+
+Warm regards,
+Cupid`;
+
+// Send email to the first user
+sendEmail(maleUserEmail, subjectTemplate, textTemplate);
+
+// Send emails to other users
+updatedStudent2.forEach((item) => {
+    const vtu = item.VTU;
+    const userEmail = `vtu${vtu}@veltech.edu.in`;
+    sendEmail(userEmail, subjectTemplate, textTemplate);
+});
+             
+             
+             
         }
+        
         
 
        
@@ -661,4 +741,19 @@ server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 
+
+   
  
+
+
+     // Example usage:
+            //   const maleUserEmail = 'vtu18995@veltech.edu.in'; // Replace with the male user's email address
+            //   const subject = 'A Match Has Been Found For You!';
+            //   const text = `Hey User,
+            //   Exciting news! We've discovered a potential match just for you. Log in to cupidhub.online to learn more. Keep an open mind as you embark on this journey of discovery, connection, and perhaps even love!
+              
+            //   Warm regards,
+            //   Cupid`;
+              
+            //   sendEmail(maleUserEmail, subject, text);
+             
