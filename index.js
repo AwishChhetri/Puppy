@@ -63,6 +63,15 @@ const studentSchema = new mongoose.Schema({
             ref: 'Student' 
         }
     ],
+    Gender: {
+        type: String,
+     
+    },
+    Picker:{
+        type:Boolean,
+        default:false,
+    }
+
    
 });
 
@@ -82,6 +91,33 @@ const ChatRoomSchema = new mongoose.Schema({
         }
     ]
 });
+
+
+const genderSchema = new mongoose.Schema({
+  
+        userId: {
+            type: String,
+           
+        },
+        Questions: [{
+            type: String,
+           
+        }],
+        LookingFor: {
+            type: String,
+           
+        },
+        Gender:{
+            type: String,
+        }
+
+   
+      
+});
+
+// Create model from schema
+const Gender = mongoose.model('Gender', genderSchema);
+
 
   
   // Create ChatRoom model
@@ -473,7 +509,152 @@ app.get('/',(req,res)=>{
 })
 
   
-  
+app.post('/cupidPicker', async (req, res) => {
+    try {
+        console.log(req.body);
+        const { sex, lookingFor, ...responses } = req.body;
+        const userId = req.body.userId;
+        console.log("Sex:", sex);
+        console.log("Looking for:", lookingFor);
+
+        // Update the student's gender
+        const updatedStudent = await Student.findByIdAndUpdate(
+            userId, // Search criteria
+            { $set: { Gender: sex ,Picker: true } }, // Set the new gender value
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedStudent) {
+            return res.status(404).json({ error: "No student found with the specified ID" });
+        }
+
+        // Log the updated student
+        console.log("Updated student:", updatedStudent);
+
+        // Construct query to match each selected option separately
+        const matchingQuery = {
+            Gender: lookingFor,
+            LookingFor: sex,
+        };
+        console.log("match Query", matchingQuery);
+        
+        // Find documents in the Gender collection matching the constructed query
+        let matching = await Gender.find(matchingQuery);
+        console.log("matching", matching);
+
+        // Filter out documents with the same userId as the current user
+        matching = matching.filter(doc => doc.userId !== userId);
+        console.log("matching after filter", matching);
+
+        const finalMatch = [];
+
+        // Filter matching documents based on selected options
+         matching.filter(item => {
+            console.log(item.Questions)
+            const isMatch = responses.selectedOptions.every((option, index) => {
+                console.log("Option:",option)
+                console.log("Questions",item.Questions[index])
+                
+                 return option === item.Questions[index];
+             
+                
+            });
+            if(isMatch){
+                finalMatch.push(item)
+            }
+        
+            return isMatch;
+        });
+        console.log("Final Matches:", finalMatch);
+        
+        if (finalMatch.length === 0) {
+            console.log("match not found");
+        } else {
+            console.log("match found");
+            
+            // Extract userId from finalMatch items
+            const matchedUserIds = finalMatch.map(match => match.userId);
+        
+            // Update each student's matches array
+            try {
+                const updatedStudents = await Promise.all(matchedUserIds.map(async (matchedUserId) => {
+                    // Find the student by userId and update their matches array
+                    return await Student.findByIdAndUpdate(
+                        userId,
+                        { $push: { matches: matchedUserIds } }, // Add current user's userId to matches array
+                        { new: true }
+                    );
+                }));
+
+                const updatedStudent2 = await Promise.all(matchedUserIds.map(async (matchedUserId) => {
+                    // Find the student by userId and update their matches array
+                    return await Student.findByIdAndUpdate(
+                        matchedUserIds,
+                        { $push: { matches: userId } }, // Add current user's userId to matches array
+                        { new: true }
+                    );
+                }));
+        
+                console.log("Updated students with matches:", updatedStudents);
+                console.log("Updated students with matches:", updatedStudent2);
+            } catch (error) {
+                console.error("Error updating students with matches:", error);
+                // Handle error if updating students fails
+            }
+        }
+        
+
+       
+
+        // Save the responses to Gender collection
+        const newGender = new Gender({
+            userId: userId,
+            LookingFor: lookingFor,
+            Questions: responses.selectedOptions,
+            Gender: sex,
+        });
+
+        const savedGender = await newGender.save();
+        // console.log("Saved gender:", savedGender);
+
+        res.status(200).json({ message: "Student details updated successfully", student: updatedStudent });
+    } catch (error) {
+        // Handle errors
+        console.error("Error:", error);
+        res.status(500).json({ error: "An error occurred while updating student details" });
+    }
+});
+
+
+
+
+app.post('/studentDetails', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        console.log("=================",req.body)
+        // Find the student details by userId
+        const student = await Student.findById(userId);
+
+        if (!student) {
+            return res.status(404).json({ error: "No student found with the specified ID" });
+        }
+
+        // Retrieve the Picker status from the student document
+        const pickerStatus = student.Picker;
+        const name= student.Name; // Assuming the picker status is stored in the PickerStatus field
+        console.log(pickerStatus,name)
+        // Respond with the Picker status
+        res.send({ PickerStatus: pickerStatus });
+    } catch (error) {
+        // Handle errors
+        console.error("Error:", error);
+        res.status(500).json({ error: "An error occurred while fetching student details" });
+    }
+});
+
+
+
+
 // Start the server
 const PORT = process.env.PORT || 8000;
 server.listen(PORT, () => {
@@ -481,26 +662,3 @@ server.listen(PORT, () => {
   });
 
  
-  function generateSingleValue(id1, id2) {
-    // Convert IDs to strings
-    const strId1 = id1.toString();
-    const strId2 = id2.toString();
-
-    // Sort the IDs
-    const sortedIds = [strId1, strId2].sort();
-
-    // Concatenate the sorted IDs
-    const combinedIds = sortedIds.join('');
-
-    // Hash the concatenated string using SHA-256
-    const hash = crypto.createHash('sha256').update(combinedIds).digest('hex');
-
-    return hash;
-}
-
-// Example usage:
-const id1 = "6050b14363d4380041f0a2a1"; // Example ObjectId 1
-const id2 = "6050b14663d4380041f0a2a2"; // Example ObjectId 2
-
-const singleValue = generateSingleValue(id1, id2);
-console.log(singleValue);
