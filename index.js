@@ -351,7 +351,7 @@ app.post('/add-match', async (req, res) => {
         console.log(user)
         console.log(user1)
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ message: 'User not found' });
         }
         
         if(!user1.MatchRequests.includes(matchId)){
@@ -363,7 +363,7 @@ app.post('/add-match', async (req, res) => {
                     user1.Matchs.push(matchId);
                     await user.save();
                     await user1.save();
-                    return res.status(200).json({ message: 'Match found' });
+                    return res.status(200).json({ message: 'Congratulations! Match found' });
                     }else{
                         return res.status(200).json({ message: 'Aleady Matched' });
                     }
@@ -372,19 +372,19 @@ app.post('/add-match', async (req, res) => {
                     if (user1.MatchRequests.length < 8) {
                         user1.MatchRequests.push(matchId);
                         await user1.save();
-                        return res.status(200).json({ message: 'Match ID added successfully' });
+                        return res.status(200).json({ message: 'Match Requested!' });
                     } else {
-                        return res.status(200).json({ message: 'Reached your max limit' });
+                        return res.status(201).json({ message: 'Limit exceeds!' });
                     }
                     
                 }
             }else{
-                return res.status(200).json({ message: 'Aleady Matched----------' });
+                return res.status(200).json({ message: 'You are already matched!' });
             }
             
 
         }else{
-            return res.status(200).json({ message: 'Match ID already in request' });
+            return res.status(200).json({ message: 'Requested Already!' });
 
         }
 
@@ -644,7 +644,7 @@ app.post('/studentDetails', async (req, res) => {
         const name= student.Name; // Assuming the picker status is stored in the PickerStatus field
         console.log(pickerStatus,name)
         // Respond with the Picker status
-        res.send({ PickerStatus: pickerStatus });
+        res.send({ PickerStatus: pickerStatus , name:name});
     } catch (error) {
         // Handle errors
         console.error("Error:", error);
