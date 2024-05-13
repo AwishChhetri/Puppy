@@ -192,18 +192,18 @@ io.on('connection', (socket) => {
 
 
 
-// app.get('/insert', async (req, res) => {
-//     try {
-//         const data = fs.readFileSync('Student2.json', 'utf8');
-//         const jsonData = JSON.parse(data);
-//         const result = await Student.insertMany(jsonData);
-//         console.log('Data inserted successfully:', result);
-//         res.status(200).send('Data inserted successfully');
-//     } catch (error) {
-//         console.error('Error inserting data:', error);
-//         res.status(500).send('Error inserting data');
-//     }
-// });
+app.get('/insert', async (req, res) => {
+    try {
+        const data = fs.readFileSync('students.json', 'utf8');
+        const jsonData = JSON.parse(data);
+        const result = await Student.insertMany(jsonData);
+        console.log('Data inserted successfully:', result);
+        res.status(200).send('Data inserted successfully');
+    } catch (error) {
+        console.error('Error inserting data:', error);
+        res.status(500).send('Error inserting data');
+    }
+});
 
 app.post('/students', async (req, res) => {
     console.log(req.body)
@@ -521,10 +521,10 @@ app.get('/',(req,res)=>{
   
 app.post('/cupidPicker', async (req, res) => {
     try {
-        if (req.body.pickerStatus === true) {
+        // if (req.body.pickerStatus === true) {
             
-            res.status(500).json({ message: "Already submitted" });
-          }
+        //     res.status(500).json({ message: "Already submitted" });
+        //   }
 
         console.log(req.body);
         const { sex, lookingFor, ...responses } = req.body;
@@ -617,7 +617,7 @@ app.post('/cupidPicker', async (req, res) => {
 const sendEmail = async (to, subject, text) => {
     try {
         await transporter.sendMail({
-            from: 'cupid.thematchmakerr@gmail.com',
+            from: 'Cupid',
             to,
             subject,
             text,
