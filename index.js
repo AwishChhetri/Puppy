@@ -647,7 +647,7 @@ updatedStudent2.forEach((item) => {
     const subjectTemplate = 'A Match Has Been Found For You!';
 const textTemplate = `Hey User,
 Exciting news! We've discovered a potential match just for you. Log in to cupidhub.online to learn more. Keep an open mind as you embark on this journey of discovery, connection, and perhaps even love!
-
+Link: www.cupidhub.online
 Warm regards,
 Cupid`;
     sendEmail(userEmail, subjectTemplate, textTemplate);
