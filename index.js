@@ -582,10 +582,12 @@ app.post('/cupidPicker', async (req, res) => {
         } else {
             console.log("match found");
         
-            const matchedUserIds = finalMatch.map(match => match.userId);
-            console.log(matchedUserIds);
+           
         
             try {
+
+                const matchedUserIds = finalMatch.map(match => match.userId);
+                console.log(matchedUserIds);
                 // Update current user's matches array with matchedUserIds
                 const updatedStudents = await Student.findByIdAndUpdate(
                     userId,
@@ -610,7 +612,7 @@ app.post('/cupidPicker', async (req, res) => {
 const sendEmail = async (to, subject, text) => {
     try {
         await transporter.sendMail({
-            from: 'cupid.thematchmakerr@gmail.com', // Your email address
+            from: 'cupid.thematchmakerr@gmail.com',
             to,
             subject,
             text,
@@ -637,6 +639,12 @@ sendEmail(maleUserEmail, subjectTemplate, textTemplate);
 updatedStudent2.forEach((item) => {
     const vtu = item.VTU;
     const userEmail = `vtu${vtu}@veltech.edu.in`;
+    const subjectTemplate = 'A Match Has Been Found For You!';
+const textTemplate = `Hey User,
+Exciting news! We've discovered a potential match just for you. Log in to cupidhub.online to learn more. Keep an open mind as you embark on this journey of discovery, connection, and perhaps even love!
+
+Warm regards,
+Cupid`;
     sendEmail(userEmail, subjectTemplate, textTemplate);
 })
             } catch (error) {
@@ -645,38 +653,7 @@ updatedStudent2.forEach((item) => {
             }
 
          
-const sendEmail = async (to, subject, text) => {
-    try {
-        await transporter.sendMail({
-            from: 'cupid.thematchmakerr@gmail.com', // Your email address
-            to,
-            subject,
-            text,
-        });
-        console.log('Email sent successfully to:', to);
-    } catch (error) {
-        console.error('Error sending email:', error);
-    }
-};
-console.log(updatedStudents.VTU)
-const vtu1 = updatedStudents.VTU;
-const maleUserEmail = `vtu${vtu1}@veltech.edu.in`;
-const subjectTemplate = 'A Match Has Been Found For You!';
-const textTemplate = `Hey User,
-Exciting news! We've discovered a potential match just for you. Log in to cupidhub.online to learn more. Keep an open mind as you embark on this journey of discovery, connection, and perhaps even love!
 
-Warm regards,
-Cupid`;
-
-// Send email to the first user
-sendEmail(maleUserEmail, subjectTemplate, textTemplate);
-
-// Send emails to other users
-updatedStudent2.forEach((item) => {
-    const vtu = item.VTU;
-    const userEmail = `vtu${vtu}@veltech.edu.in`;
-    sendEmail(userEmail, subjectTemplate, textTemplate);
-});
              
              
              
