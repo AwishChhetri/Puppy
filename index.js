@@ -521,10 +521,10 @@ app.get('/',(req,res)=>{
   
 app.post('/cupidPicker', async (req, res) => {
     try {
-        // if (req.body.pickerStatus === true) {
+        if (req.body.pickerStatus === true) {
             
-        //     res.status(500).json({ message: "Already submitted" });
-        //   }
+            res.status(500).json({ message: "Already submitted" });
+          }
 
         console.log(req.body);
         const { sex, lookingFor, ...responses } = req.body;
