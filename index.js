@@ -31,9 +31,9 @@ mongoose.connect('mongodb+srv://Veltech:zvAyJKNSNQh2WtVh@cluster0.zurjhcy.mongod
     useNewUrlParser: true,
     useUnifiedTopology: true,
 }).then(() => {
-    console.log("DB Connected")
+    // console.log("DB Connected")
 }).catch((err) => {
-    console.log("DB not connected", err)
+    // console.log("DB not connected", err)
 });
 
 const db = mongoose.connection;
@@ -72,8 +72,8 @@ const studentSchema = new mongoose.Schema({
         type:Boolean,
         default:false,
     }
-
-   
+},{
+    timestamps:true,
 });
 
 const ChatRoomSchema = new mongoose.Schema({
@@ -114,6 +114,9 @@ const genderSchema = new mongoose.Schema({
 
    
       
+},
+{
+    timestamps:true,
 });
 
 // Create model from schema
@@ -143,22 +146,22 @@ const transporter = nodemailer.createTransport({
 // Import necessary modules and set up server
 io.on('connection', (socket) => {
     socket.on('connected', async (roomId) => {
-        console.log("User Connected");
+        // console.log("User Connected");
         try {
             const chat = await ChatRoom.findOne({ roomId }, { messages: 1 });
-            console.log(chat)
+            // console.log(chat)
             const previousMessages = chat ? chat.messages : [];
-            console.log('Previous Messages:', previousMessages);
+            // console.log('Previous Messages:', previousMessages);
             // Emit 'previous_messages' event to the connected client
             socket.emit('previous_messages', previousMessages);
         } catch (error) {
-            console.error('Error fetching previous messages:', error);
+            // console.error('Error fetching previous messages:', error);
             // Handle error - You might want to emit an error event to the client
         }
     });
 
     socket.on('chat message', async (msg, callback) => { // Added 'callback' parameter
-        console.log('Received message:', msg);
+        // console.log('Received message:', msg);
         const { senderId, roomId, content } = msg;
 
         try {
@@ -176,7 +179,7 @@ io.on('connection', (socket) => {
                 { new: true }
             );
 
-            console.log('Updated chat room:', updatedChatRoom);
+            // console.log('Updated chat room:', updatedChatRoom);
             io.emit('chat message', msg);
             // Send acknowledgment to the client
             callback({ success: true }); // Sending success acknowledgment
@@ -197,7 +200,7 @@ app.get('/insert', async (req, res) => {
         const data = fs.readFileSync('students.json', 'utf8');
         const jsonData = JSON.parse(data);
         const result = await Student.insertMany(jsonData);
-        console.log('Data inserted successfully:', result);
+        // console.log('Data inserted successfully:', result);
         res.status(200).send('Data inserted successfully');
     } catch (error) {
         console.error('Error inserting data:', error);
@@ -206,7 +209,7 @@ app.get('/insert', async (req, res) => {
 });
 
 app.post('/students', async (req, res) => {
-    console.log(req.body)
+    // console.log(req.body)
     try {
 
         const students = await Student.find({Degree:req.body.Degree});
@@ -237,7 +240,7 @@ app.post('/student', async (req, res) => {
         if (!student) {
             return res.status(404).json({ error: 'Student not found' });
         }
-        console.log(student)
+        // console.log(student)
         const matchRequests = student.Matchs;
 
         // Fetch VTU and name for each match request
@@ -250,7 +253,7 @@ app.post('/student', async (req, res) => {
 
         const count = matchRequestDetails.length; // Count the number of match requests
 
-        console.log(matchRequestDetails);
+        // console.log(matchRequestDetails);
         res.status(200).json({ matchRequestDetails, count, student });
     } catch (error) {
         console.error('Error fetching match requests:', error);
@@ -268,11 +271,11 @@ app.post('/login', async (req, res) => {
     if (email.endsWith('@veltech.edu.in')) {
         // Extract student number
         const studentNumber = email.match(/vtu(\d{5})@veltech.edu.in/)[1];
-        console.log(studentNumber)
+        // console.log(studentNumber)
         try {
             // Fetch student from MongoDB
             const student = await Student.findOne({VTU: studentNumber });
-            console.log(student)
+            // console.log(student)
             if (student) {
                 // Generate JWT
                 const token = jwt.sign({
@@ -297,7 +300,7 @@ app.post('/login', async (req, res) => {
 
 app.get('/matchRequest/:userId', async (req, res) => {
     const userId = req.params.userId; // Access userId directly from params
-    console.log(userId);
+    // console.log(userId);
 
     try {
         // Find the student with the provided user ID
@@ -320,7 +323,7 @@ app.get('/matchRequest/:userId', async (req, res) => {
 
         const count = matchRequests.length; // Count the number of match requests
 
-        console.log(matchRequestDetails);
+        // console.log(matchRequestDetails);
         return res.status(200).json({ matchRequestDetails, count });
     } catch (error) {
         console.error('Error searching for match requests:', error);
@@ -358,8 +361,8 @@ app.post('/add-match', async (req, res) => {
         // Check if the user exists
         const user = await Student.findById(matchId);
         const user1 = await Student.findById(userId);
-        console.log(user)
-        console.log(user1)
+        // console.log(user)
+        // console.log(user1)
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -410,11 +413,11 @@ app.post('/add-match', async (req, res) => {
 
   app.post('/approve', async (req, res) => {
     const { id, approvalStatus, userId } = req.body;
-   console.log(req.body)
+//    console.log(req.body)
     try {
 
         const student = await Student.findById(userId);
-         console.log(student)
+        //  console.log(student)
         if (!student) {
             return res.status(404).json({ error: 'Student not found' });
         }
@@ -423,7 +426,7 @@ app.post('/add-match', async (req, res) => {
             // If approvalStatus is true
             // Check if the match request ID already exists in the Matchs array
             if (student.Matchs.includes(id)) {
-                console.log('Match request already approved')
+                // console.log('Match request already approved')
                 return res.status(200).json({ message: 'Match request already approved' });
               
             }
@@ -469,7 +472,7 @@ app.post('/create-chat-room', async (req, res) => {
     }
 
     const roomId = generateSingleValue(senderId, receiverId);
-    console.log(roomId);
+    // console.log(roomId);
 
     try {
         // Check if the chat room already exists
@@ -505,7 +508,7 @@ app.post('/create-chat-room', async (req, res) => {
         }
 
         const messages = chatRoom.messages;
-        console.log(messages)
+        // console.log(messages)
         // Return the messages
         return res.status(200).json({ messages });
     } catch (error) {
@@ -526,11 +529,11 @@ app.post('/cupidPicker', async (req, res) => {
             res.status(500).json({ message: "Already submitted" });
           }
 
-        console.log(req.body);
+        // console.log(req.body);
         const { sex, lookingFor, ...responses } = req.body;
         const userId = req.body.userId;
-        console.log("Sex:", sex);
-        console.log("Looking for:", lookingFor);
+        // console.log("Sex:", sex);
+        // console.log("Looking for:", lookingFor);
 
         // Update the student's gender
         const updatedStudent = await Student.findByIdAndUpdate(
@@ -544,31 +547,31 @@ app.post('/cupidPicker', async (req, res) => {
         }
 
         // Log the updated student
-        console.log("Updated student:", updatedStudent);
+        // console.log("Updated student:", updatedStudent);
 
         // Construct query to match each selected option separately
         const matchingQuery = {
             Gender: lookingFor,
             LookingFor: sex,
         };
-        console.log("match Query", matchingQuery);
+        // console.log("match Query", matchingQuery);
         
         // Find documents in the Gender collection matching the constructed query
         let matching = await Gender.find(matchingQuery);
-        console.log("matching", matching);
+        // console.log("matching", matching);
 
         // Filter out documents with the same userId as the current user
         matching = matching.filter(doc => doc.userId !== userId);
-        console.log("matching after filter", matching);
+        // console.log("matching after filter", matching);
 
         const finalMatch = [];
 
         // Filter matching documents based on selected options
          matching.filter(item => {
-            console.log(item.Questions)
+            // console.log(item.Questions)
             const isMatch = responses.selectedOptions.every((option, index) => {
-                console.log("Option:",option)
-                console.log("Questions",item.Questions[index])
+                // console.log("Option:",option)
+                // console.log("Questions",item.Questions[index])
                 
                  return option === item.Questions[index];
              
@@ -580,19 +583,19 @@ app.post('/cupidPicker', async (req, res) => {
         
             return isMatch;
         });
-        console.log("Final Matches:", finalMatch);
+        // console.log("Final Matches:", finalMatch);
         
         if (finalMatch.length === 0) {
-            console.log("match not found");
+            // console.log("match not found");
         } else {
-            console.log("match found");
+            // console.log("match found");
         
            
         
             try {
 
                 const matchedUserIds = finalMatch.map(match => match.userId);
-                console.log(matchedUserIds);
+                // console.log(matchedUserIds);
                 // Update current user's matches array with matchedUserIds
                 const updatedStudents = await Student.findByIdAndUpdate(
                     userId,
@@ -610,8 +613,8 @@ app.post('/cupidPicker', async (req, res) => {
                     );
                 }));
         
-                console.log("Updated students with matches:", updatedStudents);
-                console.log("Updated students with matches:", updatedStudent2);
+                // console.log("Updated students with matches:", updatedStudents);
+                // console.log("Updated students with matches:", updatedStudent2);
 
                         
 const sendEmail = async (to, subject, text) => {
@@ -622,12 +625,12 @@ const sendEmail = async (to, subject, text) => {
             subject,
             text,
         });
-        console.log('Email sent successfully to:', to);
+        // console.log('Email sent successfully to:', to);
     } catch (error) {
         console.error('Error sending email:', error);
     }
 };
-console.log(updatedStudents.VTU)
+// console.log(updatedStudents.VTU)
 const vtu1 = updatedStudents.VTU;
 const maleUserEmail = `vtu${vtu1}@veltech.edu.in`;
 const subjectTemplate = 'A Match Has Been Found For You!';
@@ -644,7 +647,7 @@ sendEmail(maleUserEmail, subjectTemplate, textTemplate);
 updatedStudent2.forEach((item) => {
     const vtu = item.VTU;
     const userEmail = `vtu${vtu}@veltech.edu.in`;
-    const subjectTemplate = 'A Match Has Been Found For You!';
+    const subjectTemplate = 'Cupid have found a match for you!';
 const textTemplate = `Hey User,
 Exciting news! We've discovered a potential match just for you. Log in to cupidhub.online to learn more. Keep an open mind as you embark on this journey of discovery, connection, and perhaps even love!
 Link: www.cupidhub.online
@@ -693,7 +696,7 @@ Cupid`;
 app.post('/studentDetails', async (req, res) => {
     try {
         const { userId } = req.body;
-        console.log("=================",req.body)
+        // console.log("=================",req.body)
         // Find the student details by userId
         const student = await Student.findById(userId);
 
@@ -704,7 +707,7 @@ app.post('/studentDetails', async (req, res) => {
         // Retrieve the Picker status from the student document
         const pickerStatus = student.Picker;
         const name= student.Name; // Assuming the picker status is stored in the PickerStatus field
-        console.log(pickerStatus,name)
+        // console.log(pickerStatus,name)
         // Respond with the Picker status
         res.send({ PickerStatus: pickerStatus , name:name});
     } catch (error) {
@@ -720,7 +723,7 @@ app.post('/studentDetails', async (req, res) => {
 // Start the server
 const PORT = process.env.PORT || 8000;
 server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    // console.log(`Server running on port ${PORT}`);
   });
 
 
