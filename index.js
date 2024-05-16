@@ -31,9 +31,9 @@ mongoose.connect('mongodb+srv://Veltech:zvAyJKNSNQh2WtVh@cluster0.zurjhcy.mongod
     useNewUrlParser: true,
     useUnifiedTopology: true,
 }).then(() => {
-    // console.log("DB Connected")
+    console.log("DB Connected")
 }).catch((err) => {
-    // console.log("DB not connected", err)
+    console.log("DB not connected", err)
 });
 
 const db = mongoose.connection;
@@ -195,18 +195,18 @@ io.on('connection', (socket) => {
 
 
 
-app.get('/insert', async (req, res) => {
-    try {
-        const data = fs.readFileSync('students.json', 'utf8');
-        const jsonData = JSON.parse(data);
-        const result = await Student.insertMany(jsonData);
-        // console.log('Data inserted successfully:', result);
-        res.status(200).send('Data inserted successfully');
-    } catch (error) {
-        console.error('Error inserting data:', error);
-        res.status(500).send('Error inserting data');
-    }
-});
+// app.get('/insert', async (req, res) => {
+//     try {
+//         const data = fs.readFileSync('students.json', 'utf8');
+//         const jsonData = JSON.parse(data);
+//         const result = await Student.insertMany(jsonData);
+//         // console.log('Data inserted successfully:', result);
+//         res.status(200).send('Data inserted successfully');
+//     } catch (error) {
+//         console.error('Error inserting data:', error);
+//         res.status(500).send('Error inserting data');
+//     }
+// });
 
 app.post('/students', async (req, res) => {
     // console.log(req.body)
@@ -261,42 +261,70 @@ app.post('/student', async (req, res) => {
     }
 });
 
+const loginCountSchema = new mongoose.Schema({
+    studentNumber: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    count: {
+        type: Number,
+        default: 1
+    }
+});
+
+const LoginCount = mongoose.model('LoginCount', loginCountSchema);
+
 
 
 const JWT_SECRET_KEY = 'Hamara hai';
+
 app.post('/login', async (req, res) => {
     const { email } = req.body;
 
     // Verify email domain
     if (email.endsWith('@veltech.edu.in')) {
         // Extract student number
-        const studentNumber = email.match(/vtu(\d{5})@veltech.edu.in/)[1];
-        // console.log(studentNumber)
-        try {
-            // Fetch student from MongoDB
-            const student = await Student.findOne({VTU: studentNumber });
-            // console.log(student)
-            if (student) {
-                // Generate JWT
-                const token = jwt.sign({
-                    name: student.name,
-                    studentNumber: student.studentNumber,
-                    // Add more payload data as needed
-                }, JWT_SECRET_KEY);
+        const match = email.match(/vtu(\d{5})@veltech.edu.in/);
+        if (match) {
+            const studentNumber = match[1];
+            try {
+                // Fetch student from MongoDB
+                const student = await Student.findOne({ VTU: studentNumber });
+                if (student) {
+                    // Increment login count
+                    let loginCountDoc = await LoginCount.findOne({ studentNumber });
+                    if (loginCountDoc) {
+                        loginCountDoc.count += 1;
+                    } else {
+                        loginCountDoc = new LoginCount({ studentNumber, count: 1 });
+                    }
+                    await loginCountDoc.save();
 
-                // Return JWT as response
-                res.status(200).json({ student, token });
-            } else {
-                res.status(404).json({mesg: 'Student not found' });
+                    // Generate JWT
+                    const token = jwt.sign({
+                        name: student.name,
+                        studentNumber: student.studentNumber,
+                    }, JWT_SECRET_KEY);
+
+                    res.status(200).json({ student, token });
+                } else {
+                    res.status(404).json({ message: 'Student not found' });
+                }
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ error: 'Internal Server Error' });
             }
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal Server Error' });
+        } else {
+            res.status(400).json({ error: 'Invalid student number format' });
         }
     } else {
-        res.status(404).json({ error: 'Invalid email domain' });
+        res.status(400).json({ error: 'Invalid email domain' });
     }
 });
+
+
+
 
 app.get('/matchRequest/:userId', async (req, res) => {
     const userId = req.params.userId; // Access userId directly from params
