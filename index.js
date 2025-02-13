@@ -270,7 +270,10 @@ const loginCountSchema = new mongoose.Schema({
     count: {
         type: Number,
         default: 1
-    }
+    },
+},
+{
+    timestamps:true,
 });
 
 const LoginCount = mongoose.model('LoginCount', loginCountSchema);
@@ -524,6 +527,25 @@ app.post('/create-chat-room', async (req, res) => {
 });
 
 
+
+// app.get('/add-students', async (req, res) => {
+     
+// VTU="19183"
+// Name="Ch Murari Venkata Naga Sai Kumar"
+// Degree="B.Tech - Computer Science Engineering"
+
+  
+//     try {
+//       const newStudent = new Student({ VTU, Name, Degree });
+//       await newStudent.save();
+//       res.status(201).send('Student details saved successfully');
+//     } catch (error) {
+//       res.status(400).send('Error saving student details: ' + error.message);
+//     }
+//   });
+  
+
+
   app.get('/chat-room-messages', async (req, res) => {
     const { roomId } = req.query;
 
@@ -648,8 +670,9 @@ app.post('/cupidPicker', async (req, res) => {
 const sendEmail = async (to, subject, text) => {
     try {
         await transporter.sendMail({
-            from: 'Cupid',
+            from: 'Cupid<cupid.thematchmakerr@gmail.com>',
             to,
+            ccEmail,
             subject,
             text,
         });
@@ -661,6 +684,7 @@ const sendEmail = async (to, subject, text) => {
 // console.log(updatedStudents.VTU)
 const vtu1 = updatedStudents.VTU;
 const maleUserEmail = `vtu${vtu1}@veltech.edu.in`;
+const ccEmail = 'cupidveltech@gmail.com';
 const subjectTemplate = 'A Match Has Been Found For You!';
 const textTemplate = `Hey User,
 Exciting news! We've discovered a potential match just for you. Log in to cupidhub.online to learn more. Keep an open mind as you embark on this journey of discovery, connection, and perhaps even love!
@@ -669,19 +693,20 @@ Warm regards,
 Cupid`;
 
 // Send email to the first user
-sendEmail(maleUserEmail, subjectTemplate, textTemplate);
+sendEmail(maleUserEmail, ccEmail,subjectTemplate, textTemplate);
 
 // Send emails to other users
 updatedStudent2.forEach((item) => {
     const vtu = item.VTU;
     const userEmail = `vtu${vtu}@veltech.edu.in`;
+    const ccEmail = 'cupidveltech@gmail.com';
     const subjectTemplate = 'Cupid have found a match for you!';
 const textTemplate = `Hey User,
 Exciting news! We've discovered a potential match just for you. Log in to cupidhub.online to learn more. Keep an open mind as you embark on this journey of discovery, connection, and perhaps even love!
 Link: www.cupidhub.online
 Warm regards,
 Cupid`;
-    sendEmail(userEmail, subjectTemplate, textTemplate);
+    sendEmail(userEmail,ccEmail, subjectTemplate,textTemplate);
 })
             } catch (error) {
                 console.error("Error updating students with matches:", error);
